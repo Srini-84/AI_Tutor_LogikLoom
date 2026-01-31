@@ -678,7 +678,16 @@
 
     <script>
         let flowType = '';
-        let studentProfile = {};
+
+        // Pre-load default profile for AI Tutor interactions
+        let studentProfile = {
+            "name": "Alex Thompson",
+            "year_of_birth": 2007,
+            "class_level": "A-levels",
+            "subject_focus": "Mathematics",
+            "likes": "Gaming, strategy games, puzzle games",
+            "dislikes": "Long lectures, overly formal tone, condescending explanations"
+        };
 
         const careerOptions = {
             'Medical': ['Doctor', 'Dentist', 'Pharmacist', 'Veterinarian'],
@@ -1165,7 +1174,8 @@
                     body: JSON.stringify({
                         question: question,
                         year_level: yearLevel,
-                        chat_history: chatHistory
+                        chat_history: chatHistory,
+                        profile: studentProfile  // Send the profile data
                     })
                 });
 

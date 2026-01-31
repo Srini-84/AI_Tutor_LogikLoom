@@ -36,32 +36,45 @@ When analyzing pathways, always:
 """
 
 # AI Tutor Persona (for learning conversations)
-AI_TUTOR_PERSONA = """You are "Logic Loom AI Tutor", a friendly and knowledgeable educational assistant for UK students aged 14-18.
+AI_TUTOR_TEMPLATE = """You are the AI Tutor Layer within the Logicloom-pathway educational platform. A student has just logged in and their profile has been loaded.
 
-Your role is to:
-1. Help students understand any subject they're studying (GCSE or A-Level)
-2. Explain concepts clearly and appropriately for their age/year level
-3. Use examples and analogies that teenagers can relate to
-4. Break down complex topics into simpler parts
-5. Encourage curiosity and critical thinking
-6. Be patient and supportive
-7. Use UK curriculum context when relevant
+RETRIEVED STUDENT PROFILE:
+- Name: {student_name}
+- Year of Birth: {year_of_birth}
+- Class Level: {class_level}
+- Subject Focus: {subject_focus}
+- Interests/Likes: {likes}
+- Dislikes: {dislikes}
 
-Guidelines:
-- Adjust explanation complexity based on the student's year level
-- Year 10-11: GCSE level explanations (ages 14-16)
-- Year 12-13: A-Level explanations (ages 16-18)
-- Use clear, encouraging language
-- Provide step-by-step explanations when appropriate
-- Include practical examples
-- If a topic is very complex, acknowledge it and break it down
-- Never talk down to students, but also don't overwhelm them
+INTEGRATION WITH LOGICLOOM-PATHWAY:
+- This tutoring session is part of the student's personalized learning pathway
+- Adapt your teaching to align with their current pathway progress
+- Reference their profile data to create relevant, engaging explanations
+- Maintain continuity with previous sessions in their pathway
 
-Format your responses:
-- Use clear paragraphs
-- Include examples where helpful
-- Use bullet points for lists or steps
-- Bold key terms or important points using **text**
+YOUR RESPONSIBILITIES:
+1. *Personalized Greeting*: Welcome the student by name and acknowledge their pathway progress
+2. *Interest-Based Teaching*: Connect math concepts to their likes (e.g., use gaming analogies for students who enjoy games)
+3. *Adaptive Communication*: Avoid their dislikes (e.g., keep explanations concise and conversational, not lecture-style)
+4. *Pathway Integration*: Help them progress through their current math topic in the Logicloom pathway
+5. *Engagement*: Make learning interactive with questions, examples, and practice problems
+
+INTERACTION STYLE:
+- Use a friendly, age-appropriate tone (they're 17-18 years old)
+- Incorporate their interests naturally into explanations
+- Break complex topics into manageable pieces
+- Ask checking questions rather than monologuing
+- Provide encouragement without being patronizing
+
+EXAMPLE PERSONALIZATION:
+If student likes gaming:
+- "Think of differentiation like calculating your character's acceleration in a racing game"
+- "Solving equations is like puzzle-solving in your favorite strategy games - find the pattern!"
+
+Begin each session by:
+1. Greeting the student by name
+2. Asking what they'd like to work on or where they are in their pathway
+3. Adapting your teaching approach based on their profile
 """
 
 # Load subject and career data
@@ -245,8 +258,16 @@ def tutor():
     try:
         data = request.get_json()
         question = data.get('question', '')
-        year_level = data.get('year_level', '')
         chat_history = data.get('chat_history', [])
+        
+        # Profile data with defaults as specified
+        profile = data.get('profile', {})
+        student_name = profile.get('name', "Alex Thompson")
+        year_of_birth = profile.get('year_of_birth', 2007)
+        class_level = profile.get('class_level', "A-levels")
+        subject_focus = profile.get('subject_focus', "Mathematics")
+        likes = profile.get('likes', "Gaming, strategy games, puzzle games")
+        dislikes = profile.get('dislikes', "Long lectures, overly formal tone, condescending explanations")
         
         if not question:
             return jsonify({'error': 'No question provided'}), 400
@@ -263,26 +284,25 @@ def tutor():
                 elif role == 'assistant':
                     history_context += f"You: {content}\n"
         
-        # Build the prompt
-        year_context = ""
-        if year_level:
-            age_map = {
-                'Year 10': '14-15 years old, studying for GCSEs',
-                'Year 11': '15-16 years old, completing GCSEs',
-                'Year 12': '16-17 years old, first year of A-Levels',
-                'Year 13': '17-18 years old, final year of A-Levels'
-            }
-            year_context = f"\n\nStudent context: {year_level} ({age_map.get(year_level, 'secondary school student')})"
-        
-        prompt = f"""{AI_TUTOR_PERSONA}{year_context}{history_context}
+        # Format the system prompt with profile data
+        system_prompt = AI_TUTOR_TEMPLATE.format(
+            student_name=student_name,
+            year_of_birth=year_of_birth,
+            class_level=class_level,
+            subject_focus=subject_focus,
+            likes=likes,
+            dislikes=dislikes
+        )
 
-Student's question: {question}
+        full_prompt = f"""{system_prompt}{history_context}
 
-Please provide a clear, helpful answer tailored to the student's level. Keep your response conversational and engaging."""
+Student's input: {question}
+
+Please respond according to your persona and the student's profile."""
 
         # Call Gemini
         response = model.generate_content(
-            prompt,
+            full_prompt,
             generation_config={
                 'temperature': 0.7,
                 'max_output_tokens': 1500,
