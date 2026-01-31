@@ -102,7 +102,7 @@ def student_setup():
         # Initialize chat history
         session['chat_history'] = []
         
-                return jsonify({
+        return jsonify({
             'success': True,
             'message': 'Student setup completed successfully',
             'student_profile': student_profile
