@@ -1,0 +1,1263 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Logic Loom – Pathway AI Tutor</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: linear-gradient(135deg, #c1e1c1 0%, #bedfc2 100%);
+            min-height: 100vh;
+            padding: 20px;
+        }
+
+        .container {
+            background: white;
+            border-radius: 20px;
+            box-shadow: 0 20px 60px rgba(0, 0, 0, 0.3);
+            max-width: 1000px;
+            margin: 0 auto;
+            padding: 40px;
+            animation: fadeIn 0.6s ease-out;
+        }
+
+        @keyframes fadeIn {
+            from {
+                opacity: 0;
+                transform: translateY(20px);
+            }
+
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
+        }
+
+        .logo {
+            text-align: center;
+            margin-bottom: 30px;
+        }
+
+        .logo h1 {
+            font-size: 2.5rem;
+            background: linear-gradient(135deg, #5d9c5d 0%, #7eb77e 100%);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            background-clip: text;
+            margin-bottom: 10px;
+        }
+
+        .logo .tagline {
+            color: #666;
+            font-size: 1rem;
+        }
+
+        .page {
+            display: none;
+        }
+
+        .page.active {
+            display: block;
+            animation: fadeIn 0.4s ease-out;
+        }
+
+        .action-buttons {
+            display: grid;
+            grid-template-columns: 1fr 1fr 1fr;
+            gap: 20px;
+            margin: 40px 0;
+        }
+
+        .action-btn {
+            padding: 30px;
+            border: 3px solid #7eb77e;
+            border-radius: 15px;
+            background: white;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            text-align: center;
+        }
+
+        .action-btn:hover {
+            background: linear-gradient(135deg, #7eb77e 0%, #9bc99b 100%);
+            color: white;
+            transform: translateY(-5px);
+            box-shadow: 0 10px 30px rgba(126, 183, 126, 0.3);
+        }
+
+        .action-btn h3 {
+            font-size: 1.3rem;
+            margin-bottom: 10px;
+        }
+
+        .action-btn p {
+            font-size: 0.9rem;
+            color: #666;
+        }
+
+        .action-btn:hover p {
+            color: white;
+        }
+
+        .form-group {
+            margin-bottom: 25px;
+        }
+
+        .form-group label {
+            display: block;
+            margin-bottom: 8px;
+            font-weight: 600;
+            color: #333;
+        }
+
+        .form-group select,
+        .form-group input,
+        .form-group textarea {
+            width: 100%;
+            padding: 12px;
+            border: 2px solid #e0e6ed;
+            border-radius: 10px;
+            font-size: 1rem;
+            font-family: inherit;
+            transition: all 0.3s ease;
+        }
+
+        .form-group select:focus,
+        .form-group input:focus,
+        .form-group textarea:focus {
+            outline: none;
+            border-color: #7eb77e;
+            box-shadow: 0 0 0 3px rgba(126, 183, 126, 0.1);
+        }
+
+        .subject-row {
+            display: grid;
+            grid-template-columns: 2fr 1fr 1fr auto;
+            gap: 10px;
+            margin-bottom: 10px;
+            align-items: center;
+        }
+
+        .subject-row select,
+        .subject-row input {
+            padding: 10px;
+            border: 2px solid #e0e6ed;
+            border-radius: 8px;
+            font-size: 0.95rem;
+        }
+
+        .subject-row select option:disabled {
+            color: #ccc;
+            font-style: italic;
+        }
+
+        .btn {
+            padding: 12px 30px;
+            border: none;
+            border-radius: 10px;
+            font-size: 1rem;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.3s ease;
+        }
+
+        .btn-primary {
+            background: linear-gradient(135deg, #7eb77e 0%, #9bc99b 100%);
+            color: white;
+        }
+
+        .btn-primary:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 10px 30px rgba(126, 183, 126, 0.4);
+        }
+
+        .btn-secondary {
+            background: #6c757d;
+            color: white;
+        }
+
+        .btn-secondary:hover {
+            background: #5a6268;
+        }
+
+        .btn-danger {
+            background: #dc3545;
+            color: white;
+            padding: 8px 12px;
+            font-size: 0.9rem;
+        }
+
+        .btn-danger:hover {
+            background: #c82333;
+        }
+
+        .btn-add {
+            background: white;
+            color: #7eb77e;
+            border: 2px dashed #7eb77e;
+            width: 100%;
+        }
+
+        .btn-add:hover {
+            background: #f0f9f0;
+        }
+
+        .button-group {
+            display: flex;
+            gap: 15px;
+            margin-top: 30px;
+        }
+
+        .loading {
+            display: none;
+            text-align: center;
+            padding: 40px;
+        }
+
+        .loading.show {
+            display: block;
+        }
+
+        .spinner {
+            border: 4px solid #f3f3f3;
+            border-top: 4px solid #7eb77e;
+            border-radius: 50%;
+            width: 50px;
+            height: 50px;
+            animation: spin 1s linear infinite;
+            margin: 0 auto 20px;
+        }
+
+        @keyframes spin {
+            0% {
+                transform: rotate(0deg);
+            }
+
+            100% {
+                transform: rotate(360deg);
+            }
+        }
+
+        .results {
+            display: none;
+            margin-top: 30px;
+            padding: 30px;
+            background: #f5faf5;
+            border-radius: 15px;
+        }
+
+        .results.show {
+            display: block;
+            animation: fadeIn 0.5s ease-out;
+        }
+
+        .tutor-card {
+            background: linear-gradient(135deg, #7eb77e 0%, #9bc99b 100%);
+            color: white;
+            padding: 25px;
+            border-radius: 15px;
+            display: flex;
+            align-items: flex-start;
+            gap: 20px;
+            margin-bottom: 25px;
+        }
+
+        .tutor-avatar {
+            font-size: 3rem;
+            flex-shrink: 0;
+        }
+
+        .results h2 {
+            color: #333;
+            margin-bottom: 20px;
+            font-size: 1.5rem;
+        }
+
+        .results h3 {
+            color: #5d9c5d;
+            margin: 20px 0 15px;
+            font-size: 1.2rem;
+        }
+
+        .output-section {
+            background: white;
+            border-radius: 12px;
+            padding: 25px;
+            margin-bottom: 20px;
+            box-shadow: 0 2px 8px rgba(0, 0, 0, 0.05);
+        }
+
+        .output-section h3 {
+            color: #5d9c5d;
+            font-size: 1.3rem;
+            margin-bottom: 15px;
+            padding-bottom: 10px;
+            border-bottom: 2px solid #e8f5e8;
+        }
+
+        .output-section p {
+            line-height: 1.8;
+            color: #444;
+            margin-bottom: 15px;
+        }
+
+        .output-section ul {
+            list-style: disc;
+            padding-left: 30px;
+            margin: 15px 0;
+        }
+
+        .output-section ul li {
+            padding: 8px 0;
+            line-height: 1.7;
+            color: #555;
+        }
+
+        .subject-table {
+            width: 100%;
+            border-collapse: collapse;
+            margin: 20px 0;
+            background: white;
+            border-radius: 10px;
+            overflow: hidden;
+            border: 1px solid #e0ede0;
+        }
+
+        .subject-table th,
+        .subject-table td {
+            padding: 12px 15px;
+            text-align: left;
+            border-bottom: 1px solid #e8f5e8;
+        }
+
+        .subject-table th {
+            background: #7eb77e;
+            color: white;
+            font-weight: 600;
+            font-size: 0.95rem;
+        }
+
+        .subject-table td {
+            color: #555;
+        }
+
+        .subject-table tr:last-child td {
+            border-bottom: none;
+        }
+
+        .subject-table tr:hover {
+            background: #f9fcf9;
+        }
+
+        .career-card {
+            background: #f9fcf9;
+            border: 2px solid #e0ede0;
+            border-radius: 12px;
+            padding: 20px;
+            margin-bottom: 20px;
+            transition: all 0.3s ease;
+        }
+
+        .career-card:hover {
+            border-color: #7eb77e;
+            box-shadow: 0 4px 12px rgba(126, 183, 126, 0.15);
+            transform: translateY(-2px);
+        }
+
+        .career-card h4 {
+            color: #5d9c5d;
+            margin-bottom: 12px;
+            font-size: 1.15rem;
+        }
+
+        .career-card p {
+            margin: 8px 0;
+            line-height: 1.7;
+            color: #555;
+        }
+
+        .career-card strong {
+            color: #5d9c5d;
+        }
+
+        .error-message {
+            background: #f8d7da;
+            border: 1px solid #f5c6cb;
+            color: #721c24;
+            padding: 15px;
+            border-radius: 8px;
+            margin-bottom: 20px;
+        }
+
+        /* Chat Interface Styles */
+        .chat-container {
+            background: #f9fcf9;
+            border: 2px solid #e0ede0;
+            border-radius: 12px;
+            height: 500px;
+            overflow-y: auto;
+            padding: 20px;
+            margin-bottom: 20px;
+        }
+
+        .chat-messages {
+            display: flex;
+            flex-direction: column;
+            gap: 15px;
+        }
+
+        .chat-message {
+            display: flex;
+            gap: 12px;
+            animation: slideIn 0.3s ease-out;
+        }
+
+        @keyframes slideIn {
+            from {
+                opacity: 0;
+                transform: translateY(10px);
+            }
+
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
+        }
+
+        .message-avatar {
+            font-size: 2rem;
+            flex-shrink: 0;
+            height: fit-content;
+        }
+
+        .message-content {
+            flex: 1;
+            padding: 15px;
+            border-radius: 12px;
+            line-height: 1.6;
+        }
+
+        .message-user .message-content {
+            background: linear-gradient(135deg, #7eb77e 0%, #9bc99b 100%);
+            color: white;
+            margin-left: auto;
+        }
+
+        .message-tutor .message-content {
+            background: white;
+            border: 2px solid #e0ede0;
+            color: #333;
+        }
+
+        .message-user {
+            flex-direction: row-reverse;
+        }
+
+        .chat-input-container {
+            position: sticky;
+            bottom: 0;
+            background: white;
+            padding-top: 15px;
+        }
+
+        .chat-input {
+            width: 100%;
+            padding: 15px;
+            border: 2px solid #e0e6ed;
+            border-radius: 10px;
+            font-size: 1rem;
+            font-family: inherit;
+            resize: vertical;
+            margin-bottom: 15px;
+            transition: all 0.3s ease;
+        }
+
+        .chat-input:focus {
+            outline: none;
+            border-color: #7eb77e;
+            box-shadow: 0 0 0 3px rgba(126, 183, 126, 0.1);
+        }
+
+        .chat-welcome {
+            text-align: center;
+            color: #666;
+            padding: 40px 20px;
+        }
+
+        .chat-welcome h3 {
+            color: #5d9c5d;
+            margin-bottom: 15px;
+        }
+
+        @media (max-width: 768px) {
+            .action-buttons {
+                grid-template-columns: 1fr;
+            }
+
+            .subject-row {
+                grid-template-columns: 1fr;
+            }
+
+            .button-group {
+                flex-direction: column;
+            }
+
+            .container {
+                padding: 20px;
+            }
+        }
+    </style>
+</head>
+
+<body>
+    <div class="container">
+        <div class="logo">
+            <h1>🎓 Logic Loom</h1>
+            <p class="tagline">Your AI-Powered University Pathway Advisor</p>
+        </div>
+
+        <!-- Landing Page -->
+        <div id="landingPage" class="page active">
+            <p style="text-align: center; color: #666; margin-bottom: 30px; font-size: 1.1rem;">
+                Discover the perfect A-Level subjects and universities for your dream career
+            </p>
+
+            <div class="action-buttons">
+                <div class="action-btn" onclick="startFlow('career')">
+                    <h3>🎯 I Know My Career Goal</h3>
+                    <p>Enter your dream career and we'll show you the subjects and universities you need</p>
+                </div>
+                <div class="action-btn" onclick="startFlow('discover')">
+                    <h3>🔍 Show Me Career Options</h3>
+                    <p>Based on your current subjects and grades, discover matching careers</p>
+                </div>
+                <div class="action-btn" onclick="startFlow('tutor')">
+                    <h3>🤖 AI Tutor</h3>
+                    <p>Ask me anything about any subject - let's learn together!</p>
+                </div>
+            </div>
+        </div>
+
+        <!-- Student Profile Page -->
+        <div id="profilePage" class="page">
+            <h2>📋 Student Profile</h2>
+            <p style="color: #666; margin-bottom: 25px;">Tell us about yourself so we can provide personalized guidance
+            </p>
+
+            <form id="profileForm">
+                <div class="form-group">
+                    <label for="currentYear">Current Year *</label>
+                    <select id="currentYear" required>
+                        <option value="">Select your year...</option>
+                        <option value="Year 10">Year 10 (GCSE start)</option>
+                        <option value="Year 11">Year 11 (GCSE completion)</option>
+                        <option value="Year 12">Year 12 (A-Level start)</option>
+                        <option value="Year 13">Year 13 (A-Level completion)</option>
+                    </select>
+                </div>
+
+                <div class="form-group">
+                    <label for="interests">Interests (select multiple)</label>
+                    <select id="interests" multiple size="4">
+                        <option value="STEM">STEM (Science, Technology, Engineering, Maths)</option>
+                        <option value="Humanities">Humanities</option>
+                        <option value="Languages">Languages</option>
+                        <option value="Arts">Arts & Creative</option>
+                        <option value="Social Sciences">Social Sciences</option>
+                        <option value="Business">Business & Economics</option>
+                    </select>
+                    <small style="color: #666;">Hold Ctrl (Windows) or Cmd (Mac) to select multiple</small>
+                </div>
+
+                <div class="form-group">
+                    <label>Current Subjects & Grades *</label>
+                    <div id="subjectsContainer"></div>
+                    <button type="button" class="btn btn-add" onclick="addSubjectRow()">+ Add Subject</button>
+                </div>
+
+                <div class="button-group">
+                    <button type="button" class="btn btn-secondary" onclick="showPage('landingPage')">← Back</button>
+                    <button type="submit" class="btn btn-primary">Continue →</button>
+                </div>
+            </form>
+        </div>
+
+        <!-- Career Goal Page -->
+        <div id="careerPage" class="page">
+            <h2>🎯 Career Aspiration</h2>
+            <p style="color: #666; margin-bottom: 25px;">What career path are you interested in?</p>
+
+            <form id="careerForm">
+                <div class="form-group">
+                    <label for="careerCategory">Career Category</label>
+                    <select id="careerCategory" onchange="updateCareerOptions()">
+                        <option value="">Select a category...</option>
+                        <option value="Medical">Medical & Healthcare</option>
+                        <option value="Engineering">Engineering & Technology</option>
+                        <option value="Business">Business & Finance</option>
+                        <option value="Creative">Creative & Arts</option>
+                        <option value="Science">Science & Research</option>
+                        <option value="Education">Education</option>
+                    </select>
+                </div>
+
+                <div class="form-group">
+                    <label for="careerGoal">Specific Career *</label>
+                    <select id="careerGoal" required>
+                        <option value="">Select a career...</option>
+                    </select>
+                </div>
+
+                <div class="form-group">
+                    <label for="universityPref">University Preference (Optional)</label>
+                    <select id="universityPref">
+                        <option value="">No Preference</option>
+                        <option value="Russell Group">Russell Group Universities</option>
+                        <option value="Modern">Modern Universities</option>
+                        <option value="Specialist">Specialist Institutions</option>
+                    </select>
+                </div>
+
+                <div class="button-group">
+                    <button type="button" class="btn btn-secondary" onclick="showPage('profilePage')">← Back</button>
+                    <button type="submit" class="btn btn-primary">Generate Pathway 🚀</button>
+                </div>
+            </form>
+        </div>
+
+        <!-- AI Tutor Page -->
+        <div id="tutorPage" class="page">
+            <h2>🤖 AI Tutor - Let's Learn Together!</h2>
+            <p style="color: #666; margin-bottom: 25px;">Ask me anything about any subject. I'm here to help you learn
+                and understand.</p>
+
+            <div class="form-group">
+                <label for="tutorYear">Your Current Year (Optional - helps me tailor explanations)</label>
+                <select id="tutorYear">
+                    <option value="">Select your year...</option>
+                    <option value="Year 10">Year 10 (GCSE start)</option>
+                    <option value="Year 11">Year 11 (GCSE completion)</option>
+                    <option value="Year 12">Year 12 (A-Level start)</option>
+                    <option value="Year 13">Year 13 (A-Level completion)</option>
+                </select>
+            </div>
+
+            <div id="chatContainer" class="chat-container">
+                <div id="chatMessages" class="chat-messages"></div>
+            </div>
+
+            <div class="chat-input-container">
+                <textarea id="tutorQuestion" class="chat-input"
+                    placeholder="Ask your question here... (e.g., 'Explain photosynthesis', 'How do I solve quadratic equations?', 'What is the French Revolution?')"
+                    rows="3"></textarea>
+                <div class="button-group">
+                    <button type="button" class="btn btn-secondary" onclick="showPage('landingPage')">← Back to
+                        Home</button>
+                    <button type="button" class="btn btn-primary" onclick="askTutor()">Ask Question 💬</button>
+                </div>
+            </div>
+        </div>
+
+        <!-- Loading -->
+        <div id="loadingDiv" class="loading">
+            <div class="spinner"></div>
+            <p>Analyzing your pathway with AI...</p>
+        </div>
+
+        <!-- Results -->
+        <div id="resultsDiv" class="results"></div>
+    </div>
+
+    <script>
+        let flowType = '';
+        let studentProfile = {};
+
+        const careerOptions = {
+            'Medical': ['Doctor', 'Dentist', 'Pharmacist', 'Veterinarian'],
+            'Engineering': ['Civil Engineer', 'Mechanical Engineer'],
+            'Business': ['Accountant'],
+            'Legal': [],
+            'Creative': ['Architect'],
+            'Science': ['Research Scientist', 'Data Analyst'],
+            'Education': ['Teacher']
+        };
+
+        const subjects = [
+            'Mathematics', 'Further Mathematics', 'Physics', 'Chemistry', 'Biology',
+            'Computer Science', 'English Literature', 'English Language', 'History',
+            'Geography', 'Psychology', 'Economics', 'Business Studies', 'Sociology',
+            'Art & Design', 'Drama', 'Music', 'Physical Education', 'French',
+            'Spanish', 'German', 'Religious Studies', 'Philosophy'
+        ];
+
+        function startFlow(type) {
+            flowType = type;
+            if (type === 'tutor') {
+                showPage('tutorPage');
+                initializeChat();
+            } else {
+                showPage('profilePage');
+                addSubjectRow();
+                addSubjectRow();
+                addSubjectRow();
+            }
+        }
+
+        function showPage(pageId) {
+            document.querySelectorAll('.page').forEach(p => p.classList.remove('active'));
+            document.getElementById(pageId).classList.add('active');
+        }
+
+        function addSubjectRow() {
+            const container = document.getElementById('subjectsContainer');
+            const row = document.createElement('div');
+            row.className = 'subject-row';
+            row.innerHTML = `
+                <select class="subject-select" required onchange="updateSubjectOptions()">
+                    <option value="">Select subject...</option>
+                    ${subjects.map(s => `<option value="${s}">${s}</option>`).join('')}
+                </select>
+                <input type="text" class="grade-input" placeholder="Grade (e.g., A, 8)" required>
+                <select class="confidence-select">
+                    <option value="High">High Confidence</option>
+                    <option value="Medium">Medium</option>
+                    <option value="Low">Low</option>
+                </select>
+                <button type="button" class="btn btn-danger" onclick="removeSubjectRow(this)">×</button>
+            `;
+            container.appendChild(row);
+            updateSubjectOptions();
+        }
+
+        function removeSubjectRow(button) {
+            button.parentElement.remove();
+            updateSubjectOptions();
+        }
+
+        function updateSubjectOptions() {
+            const selectedSubjects = [];
+            document.querySelectorAll('.subject-select').forEach(select => {
+                if (select.value && select.value !== '') {
+                    selectedSubjects.push(select.value);
+                }
+            });
+
+            document.querySelectorAll('.subject-select').forEach(select => {
+                const currentValue = select.value;
+                select.innerHTML = '<option value="">Select subject...</option>';
+
+                subjects.forEach(subject => {
+                    const option = document.createElement('option');
+                    option.value = subject;
+                    option.textContent = subject;
+
+                    if (selectedSubjects.includes(subject) && subject !== currentValue) {
+                        option.disabled = true;
+                        option.style.color = '#ccc';
+                    }
+
+                    select.appendChild(option);
+                });
+
+                if (currentValue) {
+                    select.value = currentValue;
+                }
+            });
+        }
+
+        function updateCareerOptions() {
+            const category = document.getElementById('careerCategory').value;
+            const careerSelect = document.getElementById('careerGoal');
+            careerSelect.innerHTML = '<option value="">Select a career...</option>';
+
+            if (category && careerOptions[category]) {
+                if (careerOptions[category].length === 0) {
+                    const option = document.createElement('option');
+                    option.value = '';
+                    option.textContent = 'No careers available in this category yet';
+                    option.disabled = true;
+                    careerSelect.appendChild(option);
+                } else {
+                    careerOptions[category].forEach(career => {
+                        const option = document.createElement('option');
+                        option.value = career;
+                        option.textContent = career;
+                        careerSelect.appendChild(option);
+                    });
+                }
+            }
+        }
+
+        document.getElementById('profileForm').addEventListener('submit', function (e) {
+            e.preventDefault();
+
+            const subjectRows = document.querySelectorAll('.subject-row');
+            const subjects = [];
+            const subjectNames = [];
+
+            subjectRows.forEach(row => {
+                const subject = row.querySelector('.subject-select').value;
+                const grade = row.querySelector('.grade-input').value;
+                const confidence = row.querySelector('.confidence-select').value;
+
+                if (subject && grade) {
+                    if (subjectNames.includes(subject)) {
+                        alert(`Error: "${subject}" has been selected more than once. Please select different subjects.`);
+                        return;
+                    }
+
+                    subjectNames.push(subject);
+                    subjects.push({
+                        subject_name: subject,
+                        current_grade: grade,
+                        confidence_level: confidence
+                    });
+                }
+            });
+
+            if (subjects.length < 3) {
+                alert('Please add at least 3 subjects');
+                return;
+            }
+
+            if (subjects.length !== subjectNames.length) {
+                return;
+            }
+
+            studentProfile = {
+                current_year: document.getElementById('currentYear').value,
+                interests: Array.from(document.getElementById('interests').selectedOptions).map(o => o.value),
+                current_subjects: subjects
+            };
+
+            if (flowType === 'career') {
+                showPage('careerPage');
+            } else {
+                submitPathwayRequest();
+            }
+        });
+
+        document.getElementById('careerForm').addEventListener('submit', function (e) {
+            e.preventDefault();
+
+            studentProfile.career_aspiration = document.getElementById('careerGoal').value;
+            studentProfile.university_type = document.getElementById('universityPref').value;
+
+            submitPathwayRequest();
+        });
+
+        async function submitPathwayRequest() {
+            const loadingDiv = document.getElementById('loadingDiv');
+            const resultsDiv = document.getElementById('resultsDiv');
+
+            loadingDiv.classList.add('show');
+            resultsDiv.classList.remove('show');
+
+            try {
+                const response = await fetch('/submit', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                        mode: flowType === 'career' ? 'reverse' : 'forward',
+                        profile: studentProfile
+                    })
+                });
+
+                if (!response.ok) {
+                    throw new Error(`HTTP error! status: ${response.status}`);
+                }
+
+                const data = await response.json();
+
+                console.log('Received data:', data);
+
+                if (data.error) {
+                    resultsDiv.innerHTML = `
+                        <div class="error-message">
+                            <strong>⚠️ Error:</strong> ${data.error}
+                        </div>
+                    `;
+                } else {
+                    let responseText = '';
+                    if (typeof data === 'string') {
+                        responseText = data;
+                    } else if (data.response) {
+                        responseText = data.response;
+                    } else if (data.result) {
+                        responseText = data.result;
+                    } else {
+                        responseText = JSON.stringify(data, null, 2);
+                    }
+
+                    console.log('Response text:', responseText);
+                    displayResults(responseText);
+                }
+
+                resultsDiv.classList.add('show');
+                resultsDiv.scrollIntoView({ behavior: 'smooth', block: 'start' });
+
+            } catch (error) {
+                resultsDiv.innerHTML = `
+                    <div class="error-message">
+                        <strong>⚠️ Error:</strong> ${error.message}<br><br>
+                        Please check your connection and try again.
+                    </div>
+                `;
+                resultsDiv.classList.add('show');
+            } finally {
+                loadingDiv.classList.remove('show');
+            }
+        }
+
+        function displayResults(text) {
+            const resultsDiv = document.getElementById('resultsDiv');
+            const formattedContent = formatText(text);
+
+            let html = `
+                <div class="tutor-card">
+                    <div class="tutor-avatar">🎓</div>
+                    <div style="flex: 1;">
+                        <h3 style="color: white; margin: 0 0 15px 0;">Logic Loom AI Tutor - Your Personalized Pathway Analysis</h3>
+                    </div>
+                </div>
+                <div style="margin-top: 20px;">
+                    ${formattedContent}
+                </div>
+                <div class="button-group" style="margin-top: 30px;">
+                    <button class="btn btn-secondary" onclick="showPage('landingPage'); location.reload();">Start Over</button>
+                    <button class="btn btn-primary" onclick="window.print()">Save/Print Results</button>
+                </div>
+            `;
+
+            resultsDiv.innerHTML = html;
+        }
+
+        function formatText(text) {
+            if (!text) return '';
+
+            // Fix escaped asterisks and convert markdown bold
+            text = text.replace(/\\\*/g, '*');
+            text = text.replace(/\*\*(.*?)\*\*/g, '<strong>$1</strong>');
+
+            let formatted = '';
+            const lines = text.split('\n');
+            let currentSection = null;
+            let sectionContent = [];
+
+            for (let i = 0; i < lines.length; i++) {
+                const line = lines[i].trim();
+                if (!line) continue;
+
+                // Check for section headers (# or numbered)
+                const headerMatch = line.match(/^(#{1,3}|\d+\.)\s*(.+)/);
+
+                if (headerMatch) {
+                    // Save previous section
+                    if (currentSection && sectionContent.length > 0) {
+                        formatted += createSection(currentSection, sectionContent.join('\n'));
+                        sectionContent = [];
+                    }
+                    // Start new section
+                    currentSection = headerMatch[2].replace(/<\/?strong>/g, '');
+                } else {
+                    sectionContent.push(line);
+                }
+            }
+
+            // Save last section
+            if (currentSection && sectionContent.length > 0) {
+                formatted += createSection(currentSection, sectionContent.join('\n'));
+            }
+
+            // Fallback for non-sectioned content
+            if (!formatted) {
+                const paragraphs = text.split('\n\n');
+                paragraphs.forEach(p => {
+                    p = p.trim();
+                    if (p) {
+                        formatted += `<div class="output-section"><p>${p.replace(/\n/g, '<br>')}</p></div>`;
+                    }
+                });
+            }
+
+            return formatted;
+        }
+
+        function createSection(title, content) {
+            let html = `<div class="output-section"><h3>${title}</h3>`;
+
+            // Detect if content contains a table (pipe-separated)
+            if (content.includes('|') && content.split('\n').filter(line => line.includes('|')).length >= 2) {
+                html += parseTable(content);
+            }
+            // Detect career card format (bold headers with descriptions)
+            else if (content.match(/<strong>.*?<\/strong>:/g)) {
+                html += parseCareerCards(content);
+            }
+            // Detect bullet lists
+            else if (content.match(/^[\-\*]\s+/m)) {
+                html += parseList(content);
+            }
+            // Regular paragraphs
+            else {
+                const paragraphs = content.split('\n\n');
+                paragraphs.forEach(p => {
+                    p = p.trim();
+                    if (p) {
+                        html += `<p>${p.replace(/\n/g, '<br>')}</p>`;
+                    }
+                });
+            }
+
+            html += '</div>';
+            return html;
+        }
+
+        function parseTable(content) {
+            const lines = content.split('\n').filter(line => line.trim() && line.includes('|'));
+
+            // Remove separator lines (lines with only dashes and pipes)
+            const dataLines = lines.filter(line => !line.match(/^[\s\|\-]+$/));
+
+            if (dataLines.length < 2) return `<p>${content}</p>`;
+
+            let tableHtml = '<table class="subject-table"><thead><tr>';
+
+            // Header row
+            const headers = dataLines[0].split('|').map(cell => cell.trim()).filter(cell => cell);
+            headers.forEach(header => {
+                tableHtml += `<th>${header}</th>`;
+            });
+            tableHtml += '</tr></thead><tbody>';
+
+            // Data rows
+            for (let i = 1; i < dataLines.length; i++) {
+                const cells = dataLines[i].split('|').map(cell => cell.trim()).filter(cell => cell);
+                tableHtml += '<tr>';
+                cells.forEach(cell => {
+                    tableHtml += `<td>${cell}</td>`;
+                });
+                tableHtml += '</tr>';
+            }
+
+            tableHtml += '</tbody></table>';
+            return tableHtml;
+        }
+
+        function parseCareerCards(content) {
+            const lines = content.split('\n').filter(line => line.trim());
+            let html = '';
+            let currentCard = null;
+            let cardContent = '';
+
+            lines.forEach(line => {
+                line = line.trim().replace(/^[\-\*]\s+/, '');
+
+                // Check for new card (bold title without colon or with colon but not a known attribute)
+                const titleMatch = line.match(/^<strong>([^<]+)<\/strong>:?\s*(.*)$/);
+
+                if (titleMatch) {
+                    const title = titleMatch[1].trim();
+                    const value = titleMatch[2].trim();
+
+                    // Attributes that don't start new cards
+                    const attributes = ['requirements', 'entry requirements', 'why', 'assessment',
+                        'match', 'action', 'steps', 'timeline', 'growth', 'focus',
+                        'grade', 'grades', 'subject', 'subjects', 'alternative'];
+
+                    const isAttribute = attributes.some(attr => title.toLowerCase().includes(attr));
+
+                    if (!isAttribute && (line.indexOf(':') === -1 || value.length > 10)) {
+                        // Close previous card
+                        if (currentCard) {
+                            html += `<div class="career-card">
+                                <h4>${currentCard}</h4>
+                                ${cardContent}
+                            </div>`;
+                            cardContent = '';
+                        }
+
+                        // Start new card
+                        currentCard = title;
+                        if (value) {
+                            cardContent += `<p>${value}</p>`;
+                        }
+                    } else {
+                        // Add as attribute to current card
+                        cardContent += `<p><strong>${title}:</strong> ${value}</p>`;
+                    }
+                } else {
+                    // Regular text line
+                    if (line) {
+                        cardContent += `<p>${line}</p>`;
+                    }
+                }
+            });
+
+            // Close last card
+            if (currentCard) {
+                html += `<div class="career-card">
+                    <h4>${currentCard}</h4>
+                    ${cardContent}
+                </div>`;
+            }
+
+            return html;
+        }
+
+        function parseList(content) {
+            const items = content.split('\n').filter(line => line.trim());
+            let html = '<ul>';
+            items.forEach(item => {
+                item = item.trim().replace(/^[\-\*]\s+/, '');
+                if (item) {
+                    html += `<li>${item}</li>`;
+                }
+            });
+            html += '</ul>';
+            return html;
+        }
+
+        // AI Tutor Functions
+        let chatHistory = [];
+
+        function initializeChat() {
+            const chatMessages = document.getElementById('chatMessages');
+            chatMessages.innerHTML = `
+                <div class="chat-welcome">
+                    <h3>👋 Welcome to Your AI Tutor!</h3>
+                    <p>I'm here to help you learn and understand any subject better.</p>
+                    <p>Feel free to ask me questions about Math, Science, History, Languages, or any other subject you're studying!</p>
+                </div>
+            `;
+            chatHistory = [];
+        }
+
+        async function askTutor() {
+            const questionInput = document.getElementById('tutorQuestion');
+            const question = questionInput.value.trim();
+            const yearLevel = document.getElementById('tutorYear').value;
+
+            if (!question) {
+                alert('Please enter a question!');
+                return;
+            }
+
+            // Add user message to chat
+            addMessageToChat('user', question);
+            questionInput.value = '';
+
+            // Show thinking indicator
+            const thinkingId = addThinkingIndicator();
+
+            try {
+                const response = await fetch('/tutor', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                        question: question,
+                        year_level: yearLevel,
+                        chat_history: chatHistory
+                    })
+                });
+
+                if (!response.ok) {
+                    throw new Error(`HTTP error! status: ${response.status}`);
+                }
+
+                const data = await response.json();
+
+                // Remove thinking indicator
+                removeThinkingIndicator(thinkingId);
+
+                if (data.error) {
+                    addMessageToChat('tutor', `Sorry, I encountered an error: ${data.error}`);
+                } else {
+                    const answer = data.response || data.answer || 'I apologize, but I couldn\'t generate a response.';
+                    addMessageToChat('tutor', answer);
+
+                    // Update chat history
+                    chatHistory.push({ role: 'user', content: question });
+                    chatHistory.push({ role: 'assistant', content: answer });
+                }
+
+            } catch (error) {
+                removeThinkingIndicator(thinkingId);
+                addMessageToChat('tutor', `Sorry, I encountered an error: ${error.message}`);
+            }
+        }
+
+        function addMessageToChat(sender, content) {
+            const chatMessages = document.getElementById('chatMessages');
+            const messageDiv = document.createElement('div');
+            messageDiv.className = `chat-message message-${sender}`;
+
+            const avatar = sender === 'user' ? '👤' : '🤖';
+
+            messageDiv.innerHTML = `
+                <div class="message-avatar">${avatar}</div>
+                <div class="message-content">${formatChatMessage(content)}</div>
+            `;
+
+            chatMessages.appendChild(messageDiv);
+            chatMessages.scrollTop = chatMessages.scrollHeight;
+        }
+
+        function formatChatMessage(text) {
+            // Convert markdown-style bold
+            text = text.replace(/\*\*(.*?)\*\*/g, '<strong>$1</strong>');
+
+            // Convert line breaks to <br>
+            text = text.replace(/\n/g, '<br>');
+
+            return text;
+        }
+
+        function addThinkingIndicator() {
+            const chatMessages = document.getElementById('chatMessages');
+            const thinkingDiv = document.createElement('div');
+            const thinkingId = 'thinking-' + Date.now();
+            thinkingDiv.id = thinkingId;
+            thinkingDiv.className = 'chat-message message-tutor';
+            thinkingDiv.innerHTML = `
+                <div class="message-avatar">🤖</div>
+                <div class="message-content">
+                    <em>Thinking...</em>
+                </div>
+            `;
+            chatMessages.appendChild(thinkingDiv);
+            chatMessages.scrollTop = chatMessages.scrollHeight;
+            return thinkingId;
+        }
+
+        function removeThinkingIndicator(thinkingId) {
+            const thinkingDiv = document.getElementById(thinkingId);
+            if (thinkingDiv) {
+                thinkingDiv.remove();
+            }
+        }
+
+        // Allow Enter key to send message (Shift+Enter for new line)
+        document.addEventListener('DOMContentLoaded', function () {
+            const tutorQuestion = document.getElementById('tutorQuestion');
+            if (tutorQuestion) {
+                tutorQuestion.addEventListener('keydown', function (e) {
+                    if (e.key === 'Enter' && !e.shiftKey) {
+                        e.preventDefault();
+                        askTutor();
+                    }
+                });
+            }
+        });
+    </script>
+</body>
+
+</html>
