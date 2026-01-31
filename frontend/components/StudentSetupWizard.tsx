@@ -120,7 +120,7 @@ export function StudentSetupWizard({ onComplete }: StudentSetupWizardProps) {
     if (!validateStep(6)) return
 
     try {
-      const response = await fetch("http://localhost:5000/student-setup", {
+      const response = await fetch("http://localhost:5001/student-setup", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
