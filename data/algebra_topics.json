@@ -1,0 +1,205 @@
+{
+    "topics": [
+        {
+            "id": "linear_equations",
+            "label": "Linear Equations",
+            "diagnostics": {
+                "foundation": {
+                    "question": "Solve: 2x + 3 = 11",
+                    "answerType": "short",
+                    "correctAnswer": "x = 4"
+                },
+                "core": {
+                    "question": "Solve: 3(x - 2) = 15",
+                    "answerType": "short",
+                    "correctAnswer": "x = 7"
+                },
+                "higher": {
+                    "question": "Solve: (2x + 1)/3 = 5",
+                    "answerType": "short",
+                    "correctAnswer": "x = 7"
+                }
+            },
+            "misconceptionLabels": [
+                "sign_errors",
+                "arithmetic_errors",
+                "forgetting_to_isolate",
+                "bracket_expansion_errors",
+                "distribution_errors",
+                "fraction_handling",
+                "order_of_operations"
+            ],
+            "practiceTemplates": [
+                "Solve: {a}x + {b} = {c}",
+                "Solve: {a}(x + {b}) = {c}",
+                "Solve: (x + {a})/{b} = {c}",
+                "Solve: {a}x - {b} = {c}x + {d}"
+            ]
+        },
+        {
+            "id": "expanding_brackets",
+            "label": "Expanding Brackets",
+            "diagnostics": {
+                "foundation": {
+                    "question": "Expand: 2(x + 3)",
+                    "answerType": "short",
+                    "correctAnswer": "2x + 6"
+                },
+                "core": {
+                    "question": "Expand: (x + 2)(x + 3)",
+                    "answerType": "short",
+                    "correctAnswer": "x^2 + 5x + 6"
+                },
+                "higher": {
+                    "question": "Expand: (2x - 1)(3x + 4)",
+                    "answerType": "short",
+                    "correctAnswer": "6x^2 + 5x - 4"
+                }
+            },
+            "misconceptionLabels": [
+                "forgetting_to_multiply_all_terms",
+                "sign_errors",
+                "arithmetic_errors",
+                "foil_errors",
+                "combining_like_terms",
+                "negative_signs"
+            ],
+            "practiceTemplates": [
+                "Expand: {a}(x + {b})",
+                "Expand: (x + {a})(x + {b})",
+                "Expand: ({a}x + {b})({c}x + {d})",
+                "Expand: (x - {a})(x + {b})"
+            ]
+        },
+        {
+            "id": "factorisation",
+            "label": "Factorisation",
+            "diagnostics": {
+                "foundation": {
+                    "question": "Factorise: 3x + 6",
+                    "answerType": "short",
+                    "correctAnswer": "3(x + 2)"
+                },
+                "core": {
+                    "question": "Factorise: x^2 + 5x + 6",
+                    "answerType": "short",
+                    "correctAnswer": "(x + 2)(x + 3)"
+                },
+                "higher": {
+                    "question": "Factorise: 2x^2 + 7x + 3",
+                    "answerType": "short",
+                    "correctAnswer": "(2x + 1)(x + 3)"
+                }
+            },
+            "misconceptionLabels": [
+                "missing_common_factors",
+                "incorrect_factorisation",
+                "sign_errors",
+                "incorrect_factor_pairs",
+                "foil_verification_errors",
+                "coefficient_handling",
+                "trial_and_error_errors"
+            ],
+            "practiceTemplates": [
+                "Factorise: {a}x + {b}",
+                "Factorise: x^2 + {a}x + {b}",
+                "Factorise: {a}x^2 + {b}x + {c}",
+                "Factorise: x^2 - {a}^2"
+            ]
+        },
+        {
+            "id": "solving_inequalities",
+            "label": "Solving Inequalities",
+            "diagnostics": {
+                "foundation": {
+                    "question": "Solve: x + 3 > 7",
+                    "answerType": "short",
+                    "correctAnswer": "x > 4"
+                },
+                "core": {
+                    "question": "Solve: 2x - 5 <= 11",
+                    "answerType": "short",
+                    "correctAnswer": "x <= 8"
+                },
+                "higher": {
+                    "question": "Solve: -3x + 2 > 8",
+                    "answerType": "short",
+                    "correctAnswer": "x < -2"
+                }
+            },
+            "misconceptionLabels": [
+                "inequality_direction_errors",
+                "sign_errors",
+                "forgetting_to_flip",
+                "negative_coefficient_handling",
+                "negative_coefficient_flip"
+            ],
+            "practiceTemplates": [
+                "Solve: x + {a} > {b}",
+                "Solve: {a}x - {b} <= {c}",
+                "Solve: -{a}x + {b} > {c}",
+                "Solve: {a}x + {b} < {c}x + {d}"
+            ]
+        },
+        {
+            "id": "simultaneous_equations",
+            "label": "Simultaneous Equations",
+            "diagnostics": {
+                "foundation": {
+                    "question": "Solve: x + y = 5, x - y = 1",
+                    "answerType": "short",
+                    "correctAnswer": "x = 3, y = 2"
+                },
+                "core": {
+                    "question": "Solve: 2x + y = 7, x + 3y = 11",
+                    "answerType": "short",
+                    "correctAnswer": "x = 2, y = 3"
+                },
+                "higher": {
+                    "question": "Solve: 3x - 2y = 8, 2x + 5y = 1",
+                    "answerType": "short",
+                    "correctAnswer": "x = 2, y = -1"
+                }
+            },
+            "misconceptionLabels": [
+                "substitution_errors",
+                "elimination_errors",
+                "arithmetic_errors",
+                "elimination_setup",
+                "negative_coefficient_handling"
+            ],
+            "practiceTemplates": [
+                "Solve: x + y = {a}, x - y = {b}",
+                "Solve: {a}x + y = {b}, x + {c}y = {d}",
+                "Solve: {a}x - {b}y = {c}, {d}x + {e}y = {f}",
+                "Solve: {a}x + {b}y = {c}, {d}x - {e}y = {f}"
+            ]
+        }
+    ],
+    "misconceptionLabels": {
+        "sign_errors": "Sign errors (positive/negative confusion)",
+        "arithmetic_errors": "Basic arithmetic mistakes",
+        "forgetting_to_isolate": "Not isolating the variable correctly",
+        "bracket_expansion_errors": "Errors when expanding brackets",
+        "distribution_errors": "Incorrect distribution of terms",
+        "fraction_handling": "Difficulty with fraction operations",
+        "order_of_operations": "Incorrect order of operations (BIDMAS)",
+        "forgetting_to_multiply_all_terms": "Not multiplying all terms in brackets",
+        "foil_errors": "Errors in FOIL method for binomials",
+        "combining_like_terms": "Errors combining like terms",
+        "negative_signs": "Confusion with negative signs",
+        "missing_common_factors": "Not identifying common factors",
+        "incorrect_factorisation": "Incorrect factorisation method",
+        "incorrect_factor_pairs": "Wrong factor pairs for quadratics",
+        "foil_verification_errors": "Not checking factorisation by expanding",
+        "coefficient_handling": "Difficulty with coefficients in factorisation",
+        "trial_and_error_errors": "Errors in trial and error method",
+        "inequality_direction_errors": "Not flipping inequality when dividing by negative",
+        "forgetting_to_flip": "Forgetting to flip inequality sign",
+        "negative_coefficient_handling": "Errors handling negative coefficients",
+        "negative_coefficient_flip": "Not flipping inequality with negative coefficient",
+        "substitution_errors": "Errors in substitution method",
+        "elimination_errors": "Errors in elimination method",
+        "elimination_setup": "Incorrect setup for elimination"
+    }
+}

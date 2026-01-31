@@ -1,298 +1,422 @@
-from flask import Flask, render_template, request, jsonify
-
+"""LogikLoom - Adaptive Algebra Tutor with Socratic Method."""
+from flask import Flask, render_template, request, jsonify, session
 import json
 import os
+import re
+
+# Import services
+from services.gemini_client import GeminiClient
+from services.prompts import build_tutor_prompt
+from services.tutor_engine import TutorEngine
 
 app = Flask(__name__)
+app.secret_key = os.urandom(24)  # For session management
 
-# Configure Gemini API
-import google.generativeai as genai
+# Enable CORS for Next.js frontend (optional - install flask-cors if needed)
+try:
+    from flask_cors import CORS
+    CORS(app, origins=["http://localhost:3000"], supports_credentials=True)
+except ImportError:
+    # CORS not installed, add manual headers
+    @app.after_request
+    def after_request(response):
+        response.headers.add('Access-Control-Allow-Origin', 'http://localhost:3000')
+        response.headers.add('Access-Control-Allow-Headers', 'Content-Type,Authorization')
+        response.headers.add('Access-Control-Allow-Methods', 'GET,PUT,POST,DELETE,OPTIONS')
+        response.headers.add('Access-Control-Allow-Credentials', 'true')
+        return response
 
-GEMINI_API_KEY = 'AIzaSyALWhalgXwwdaiklofqzMlpDioVaQN-3k4'
-genai.configure(api_key=GEMINI_API_KEY)
-model = genai.GenerativeModel('gemini-2.0-flash')
+# Initialize services with API key from environment
+api_key = os.getenv('GEMINI_API_KEY')
+if not api_key:
+    print("WARNING: GEMINI_API_KEY not found in environment. Set it before running tutor features.")
 
-# Tutor Persona Prompt
-TUTOR_PERSONA = """You are "Logic Loom", an expert UK education pathway advisor and AI tutor. Your role is to:
+# Initialize Gemini client
+try:
+    gemini_client = GeminiClient(api_key=api_key) if api_key else None
+except ValueError:
+    gemini_client = None
+    print("WARNING: Could not initialize Gemini client. Tutor features will not work.")
 
-1. Guide students aged 14-18 through subject selection and university admissions
-2. Provide personalized, encouraging, and constructive advice
-3. Use UK education system terminology (GCSEs, A-Levels, UCAS, Russell Group, etc.)
-4. Always consider both student interests AND practical career requirements
-5. Be honest about challenging pathways while remaining supportive
-6. Prioritize critical subjects with specific grade requirements
+# Initialize tutor engine for diagnostic questions
+tutor_engine = TutorEngine(api_key=api_key) if api_key else None
 
-Your tone should be:
-- Friendly but professional
-- Encouraging yet realistic
-- Clear and concise
-- Age-appropriate for teenagers
-
-When analyzing pathways, always:
-- Highlight critical subjects with required grades
-- Suggest backup options
-- Explain WHY certain subjects are needed
-- Consider student's current performance and confidence
-"""
-
-# AI Tutor Persona (for learning conversations)
-AI_TUTOR_PERSONA = """You are "Logic Loom AI Tutor", a friendly and knowledgeable educational assistant for UK students aged 14-18.
-
-Your role is to:
-1. Help students understand any subject they're studying (GCSE or A-Level)
-2. Explain concepts clearly and appropriately for their age/year level
-3. Use examples and analogies that teenagers can relate to
-4. Break down complex topics into simpler parts
-5. Encourage curiosity and critical thinking
-6. Be patient and supportive
-7. Use UK curriculum context when relevant
-
-Guidelines:
-- Adjust explanation complexity based on the student's year level
-- Year 10-11: GCSE level explanations (ages 14-16)
-- Year 12-13: A-Level explanations (ages 16-18)
-- Use clear, encouraging language
-- Provide step-by-step explanations when appropriate
-- Include practical examples
-- If a topic is very complex, acknowledge it and break it down
-- Never talk down to students, but also don't overwhelm them
-
-Format your responses:
-- Use clear paragraphs
-- Include examples where helpful
-- Use bullet points for lists or steps
-- Bold key terms or important points using **text**
-"""
-
-# Load subject and career data
-def load_json_data():
-    try:
-        with open('subjects.json') as f:
-            subjects_data = json.load(f)
-        with open('careers.json') as f:
-            careers_data = json.load(f)
-        with open('universities.json') as f:
-            universities_data = json.load(f)
-        return subjects_data, careers_data, universities_data
-    except Exception as e:
-        print(f"Error loading JSON data: {e}")
-        return [], [], []
-
-# Function to call the Gemini API
-def call_gemini(prompt):
-    try:
-        full_prompt = f"{TUTOR_PERSONA}\n\n{prompt}"
-        response = model.generate_content(
-            full_prompt,
-            generation_config={
-                'temperature': 0.7,
-                'max_output_tokens': 2048,
-            }
-        )
-        return {'response': response.text}
-    except Exception as e:
-        return {'error': str(e)}
-
-# Function to find career data
-def find_career_data(career_name, careers_data):
-    for career in careers_data:
-        if career['career'].lower() == career_name.lower():
-            return career
-    return None
-
-# Function to find matching universities
-def find_universities_for_career(career_name, universities_data, subjects_data):
-    """Find universities that offer relevant programs for the career"""
-    # For POC, return generic university information
-    # In production, this would match based on course offerings
-    return universities_data
 
 # Route for the home page
 @app.route('/')
 def home():
     return render_template('index.html')
 
-# Route to handle form submission
-@app.route('/submit', methods=['POST'])
-def submit():
+
+# Route to handle Student Setup (formerly KYC)
+@app.route('/student-setup', methods=['POST'])
+def student_setup():
+    """Handle student setup data - no sensitive personal info."""
     try:
         data = request.get_json()
-        mode = data.get('mode')
-        profile = data.get('profile', {})
         
-        subjects_data, careers_data, universities_data = load_json_data()
+        # Build student profile with required and optional fields
+        student_profile = {
+            # Required fields
+            'grade_year': data.get('grade_year', ''),
+            'topic': data.get('topic', ''),
+            'confidence': int(data.get('confidence', 3)),
+            'goal': data.get('goal', ''),
+            'learning_style': data.get('learning_style', ''),
+            # Optional fields
+            'preferred_name': data.get('preferred_name', ''),
+            'subject': data.get('subject', 'mathematics')  # Default to mathematics for now
+        }
         
-        # Extract profile information
-        current_year = profile.get('current_year', '')
-        interests = profile.get('interests', [])
-        current_subjects = profile.get('current_subjects', [])
-        career_aspiration = profile.get('career_aspiration', '')
-        university_type = profile.get('university_type', '')
+        # Validate required fields
+        required = ['grade_year', 'topic', 'confidence', 'goal', 'learning_style']
+        missing = [field for field in required if not student_profile.get(field)]
+        if missing:
+            return jsonify({
+                'success': False,
+                'error': f'Missing required fields: {", ".join(missing)}'
+            }), 400
         
-        # Format subjects for display
-        subjects_summary = ', '.join([
-            f"{s['subject_name']} ({s['current_grade']})" 
-            for s in current_subjects
-        ])
+        # Store in session
+        session['student_profile'] = student_profile
         
-        # Construct prompt based on mode
-        if mode == 'reverse':  # Career → Subjects pathway
-            career_data = find_career_data(career_aspiration, careers_data)
-            
-            if not career_data:
-                return jsonify({
-                    'error': f"Career '{career_aspiration}' not found in database. Please select from available careers."
-                })
-            
-            matching_universities = find_universities_for_career(
-                career_aspiration, 
-                universities_data, 
-                subjects_data
+        # Choose initial difficulty using tutor engine if available
+        initial_difficulty = 'foundation' if student_profile['confidence'] <= 2 else 'core'
+        if tutor_engine:
+            initial_difficulty = tutor_engine.choose_difficulty(
+                student_profile,
+                {'weakAreas': [], 'mastered': [], 'difficulty': initial_difficulty}
             )
-            
-            prompt = f"""Based on the following student profile and career aspiration, provide a comprehensive pathway analysis:
-
-STUDENT PROFILE:
-- Current Year: {current_year}
-- Career Goal: {career_aspiration}
-- Current Subjects & Grades: {subjects_summary}
-- Interests: {', '.join(interests)}
-
-CAREER REQUIREMENTS:
-{json.dumps(career_data, indent=2)}
-
-AVAILABLE UNIVERSITIES:
-{json.dumps(matching_universities, indent=2)}
-
-TASK:
-1. **Essential Subjects**: List the ESSENTIAL A-Level subjects needed for {career_aspiration}. For each subject, specify:
-   - Minimum grade requirement (e.g., A*, A, B)
-   - Why it's critical (brief explanation)
-   - Whether the student currently takes this subject
-
-2. **Current Subject Analysis**: Compare the student's current subjects with requirements:
-   - Subjects they're already taking that align with the career
-   - Subjects they need to add or improve
-   - Current grades vs. required grades
-
-3. **University Recommendations**: Suggest 3-5 suitable UK universities:
-   - University name and type (Russell Group, etc.)
-   - Typical entry requirements (e.g., AAA, ABB)
-   - Why it's a good match for this student
-   - Realistic assessment based on current grades
-
-4. **Pathway Action Plan**: Provide specific, actionable next steps:
-   - Which subjects to focus on improving
-   - Target grades for each subject
-   - Timeline considerations based on current year
-   - Any additional qualifications needed
-
-5. **Alternative Options**: If the student's current path doesn't perfectly align:
-   - Suggest related careers with similar requirements
-   - Alternative university options
-   - Backup pathways
-
-Please structure your response clearly with headings and bullet points. Be encouraging but realistic about the challenges and requirements."""
-
-        else:  # Forward: Grades → Career discovery
-            prompt = f"""Based on the following student's current grades and subjects, identify suitable career pathways:
-
-STUDENT PROFILE:
-- Current Year: {current_year}
-- Subjects & Grades: {subjects_summary}
-- Interests: {', '.join(interests)}
-
-AVAILABLE DATA:
-Career Database: {json.dumps(careers_data, indent=2)}
-Universities: {json.dumps(universities_data, indent=2)}
-
-TASK:
-1. **Top Career Matches**: Create a strict Markdown table with these columns:
-   | Career | Description | Universities (Top 3) | Required Grades | Match Level |
-   |---|---|---|---|---|
-   (List 5-7 careers. For universities, just list names. For match level, use Strong/Moderate/Stretch)
-
-2. **Subject Strengths**: Analyze how current subjects apply:
-   - Strong subjects that open many opportunities
-   - Subjects that need improvement
-   - Recommendations for additional A-Levels
-
-3. **Detailed University Pathway**: For the top 2 recommended careers, provide more detail:
-   - Specific University Courses
-   - Why it's a good match
-
-4. **Personalized Recommendations**:
-   - Best-fit career based on grades and interests
-   - Actionable steps to strengthen the pathway
-   - Timeline and milestones
-
-5. **Growth Areas**:
-   - Subjects or skills to develop
-   - Study focus areas
-
-Please provide encouraging, specific advice. Ensure the table in section 1 is formatted correctly with the header row."""
-
-        gemini_response = call_gemini(prompt)
-
-        return jsonify(gemini_response)
         
+        # Initialize learning state with new structure
+        session['learning_state'] = {
+            'currentTopic': student_profile['topic'],
+            'difficulty': initial_difficulty,
+            'weakAreas': [],
+            'mastered': [],
+            'stage': 'diagnostic',
+            'lastQuestionId': None,
+            'nextFocus': f"Starting with {student_profile['topic']}"
+        }
+        
+        # Initialize chat history
+        session['chat_history'] = []
+        
+                return jsonify({
+            'success': True,
+            'message': 'Student setup completed successfully',
+            'student_profile': student_profile
+        })
     except Exception as e:
-        return jsonify({'error': str(e)}), 500
+        return jsonify({'success': False, 'error': str(e)}), 500
 
-# Route for AI Tutor conversations
+
+def parse_json_robust(text: str) -> dict:
+    """
+    Robustly parse JSON from text, handling code fences and extra text.
+    
+    Args:
+        text: Text that may contain JSON
+    
+    Returns:
+        Parsed JSON dict, or None if parsing fails
+    """
+    if not text:
+        return None
+    
+    text = text.strip()
+    
+    # Remove markdown code fences
+    if '```json' in text:
+        json_start = text.find('```json') + 7
+        json_end = text.find('```', json_start)
+        if json_end != -1:
+            text = text[json_start:json_end].strip()
+    elif '```' in text:
+        json_start = text.find('```') + 3
+        json_end = text.find('```', json_start)
+        if json_end != -1:
+            text = text[json_start:json_end].strip()
+    
+    # Find first '{' and last '}'
+    first_brace = text.find('{')
+    last_brace = text.rfind('}')
+    
+    if first_brace != -1 and last_brace != -1 and last_brace > first_brace:
+        text = text[first_brace:last_brace + 1]
+    
+    # Try to parse JSON
+    try:
+        return json.loads(text)
+    except json.JSONDecodeError:
+        # Try to fix common issues
+        # Remove trailing commas before closing braces/brackets
+        text = re.sub(r',\s*}', '}', text)
+        text = re.sub(r',\s*]', ']', text)
+        try:
+            return json.loads(text)
+        except json.JSONDecodeError:
+            return None
+
+
+def create_safe_fallback_response(learning_state: dict, student_message: str = "") -> dict:
+    """
+    Create a safe fallback JSON response when parsing fails.
+    
+    Args:
+        learning_state: Current learning state
+        student_message: Student's message (if any)
+    
+    Returns:
+        Safe fallback response dict
+    """
+    return {
+        'assistantMessage': "I'm having trouble understanding that. Could you try rephrasing your answer or question? Let's continue learning!",
+        'stateUpdate': learning_state,
+        'practice': [],
+        'quiz': [],
+        'plan7Days': []
+    }
+
+
+# Route for adaptive Algebra tutor
 @app.route('/tutor', methods=['POST'])
 def tutor():
+    """Adaptive Algebra tutor with Socratic method and structured responses."""
+    if not gemini_client:
+        return jsonify({
+            'error': 'Gemini client not initialized. Please set GEMINI_API_KEY environment variable.'
+        }), 500
+    
     try:
         data = request.get_json()
-        question = data.get('question', '')
-        year_level = data.get('year_level', '')
-        chat_history = data.get('chat_history', [])
+        student_message = data.get('studentMessage', '')
+        mode = data.get('mode', 'lesson')  # lesson, practice, quiz, plan, reset
         
-        if not question:
-            return jsonify({'error': 'No question provided'}), 400
+        if not student_message and mode != 'reset':
+            return jsonify({'error': 'No student message provided'}), 400
         
-        # Build context from chat history
-        history_context = ""
-        if chat_history:
-            history_context = "\n\nPrevious conversation:\n"
-            for msg in chat_history[-6:]:  # Last 3 exchanges
-                role = msg.get('role', '')
-                content = msg.get('content', '')
-                if role == 'user':
-                    history_context += f"Student: {content}\n"
-                elif role == 'assistant':
-                    history_context += f"You: {content}\n"
+        # Get student profile and state from session
+        student_profile = session.get('student_profile', {})
+        if not student_profile:
+            return jsonify({
+                'error': 'Student profile not found. Please complete student setup first.'
+            }), 400
         
-        # Build the prompt
-        year_context = ""
-        if year_level:
-            age_map = {
-                'Year 10': '14-15 years old, studying for GCSEs',
-                'Year 11': '15-16 years old, completing GCSEs',
-                'Year 12': '16-17 years old, first year of A-Levels',
-                'Year 13': '17-18 years old, final year of A-Levels'
+        learning_state = session.get('learning_state', {
+            'currentTopic': student_profile.get('topic', 'linear_equations'),
+            'difficulty': 'core',
+            'weakAreas': [],
+            'mastered': [],
+            'stage': 'diagnostic',
+            'lastQuestionId': None,
+            'nextFocus': 'Starting learning'
+        })
+        
+        chat_history = session.get('chat_history', [])
+        
+        # Handle reset mode
+        if mode == 'reset':
+            # Choose initial difficulty
+            initial_difficulty = 'foundation' if student_profile.get('confidence', 3) <= 2 else 'core'
+            if tutor_engine:
+                initial_difficulty = tutor_engine.choose_difficulty(
+                    student_profile,
+                    {'weakAreas': [], 'mastered': [], 'difficulty': initial_difficulty}
+                )
+            
+            session['learning_state'] = {
+                'currentTopic': student_profile.get('topic', 'linear_equations'),
+                'difficulty': initial_difficulty,
+                'weakAreas': [],
+                'mastered': [],
+                'stage': 'diagnostic',
+                'lastQuestionId': None,
+                'nextFocus': f"Starting fresh with {student_profile.get('topic', 'Algebra')}"
             }
-            year_context = f"\n\nStudent context: {year_level} ({age_map.get(year_level, 'secondary school student')})"
+            session['chat_history'] = []
+            learning_state = session['learning_state']
+            
+            # Get diagnostic question if tutor_engine is available
+            if tutor_engine:
+                diagnostic = tutor_engine.get_diagnostic_question(
+                    topic=learning_state['currentTopic'],
+                    difficulty=learning_state['difficulty']
+                )
+                learning_state['lastQuestionId'] = diagnostic.get('id', 'd1')
+                session['learning_state'] = learning_state
+                
+                return jsonify({
+                    'assistantMessage': f"Great! Let's start fresh. Here's a question to see where you're at:\n\n{diagnostic['question']}",
+                    'stateUpdate': learning_state,
+                    'practice': [{
+                        'id': diagnostic.get('id', 'd1'),
+                        'question': diagnostic['question'],
+                        'answerType': diagnostic['answerType']
+                    }],
+                    'quiz': [],
+                    'plan7Days': []
+                })
+            else:
+                return jsonify({
+                    'assistantMessage': "Great! Let's start fresh. What Algebra topic would you like to work on?",
+                    'stateUpdate': learning_state,
+                    'practice': [],
+                    'quiz': [],
+                    'plan7Days': []
+                })
         
-        prompt = f"""{AI_TUTOR_PERSONA}{year_context}{history_context}
-
-Student's question: {question}
-
-Please provide a clear, helpful answer tailored to the student's level. Keep your response conversational and engaging."""
+        # Add student message to chat history
+        if student_message:
+            chat_history.append({'role': 'user', 'content': student_message})
+        
+        # If we have a last question and student answered, evaluate and tag misconceptions
+        if tutor_engine and learning_state.get('lastQuestionId') and student_message:
+            # Try to get the expected answer from the last question
+            # This would ideally be stored, but for MVP we'll use the diagnostic question
+            topic = learning_state.get('currentTopic', 'linear_equations')
+            difficulty = learning_state.get('difficulty', 'core')
+            
+            # Get the question data to evaluate
+            diagnostic = tutor_engine.get_diagnostic_question(topic, difficulty)
+            
+            # Evaluate answer and tag misconceptions
+            evaluation = tutor_engine.update_state_from_student_answer(
+                topic=topic,
+                student_answer=student_message,
+                expected_signals={
+                    'correctAnswer': diagnostic.get('correctAnswer', ''),
+                    'question': diagnostic.get('question', ''),
+                    'difficulty': difficulty
+                }
+            )
+            
+            # Update weak areas with new misconceptions
+            if evaluation.get('misconceptions'):
+                weak_areas = learning_state.get('weakAreas', [])
+                for mis in evaluation['misconceptions']:
+                    if mis not in weak_areas:
+                        weak_areas.append(mis)
+                learning_state['weakAreas'] = weak_areas[:10]  # Limit to 10
+            
+            # Update mastered if correct
+            if evaluation.get('isCorrect'):
+                mastery_key = f"{topic}_{difficulty}"
+                mastered = learning_state.get('mastered', [])
+                if mastery_key not in mastered:
+                    mastered.append(mastery_key)
+                learning_state['mastered'] = mastered[:10]  # Limit to 10
+            
+            # Update difficulty based on performance
+            if tutor_engine:
+                new_difficulty = tutor_engine.choose_difficulty(student_profile, learning_state)
+                learning_state['difficulty'] = new_difficulty
+            
+            # Update stage (simple progression)
+            current_stage = learning_state.get('stage', 'diagnostic')
+            if current_stage == 'diagnostic' and evaluation.get('isCorrect'):
+                learning_state['stage'] = 'teach'
+            elif current_stage == 'teach':
+                learning_state['stage'] = 'practice'
+            
+            session['learning_state'] = learning_state
+        
+        # Get topic data for prompt building
+        topic_data = {}
+        if tutor_engine:
+            topic_data = tutor_engine.topic_data
+        else:
+            # Fallback: load topic data directly
+            try:
+                with open('data/algebra_topics.json', 'r', encoding='utf-8') as f:
+                    topic_data = json.load(f)
+                    # Build lookup dicts
+                    topic_data['topicNames'] = {}
+                    topic_data['topicById'] = {}
+                    for topic in topic_data.get('topics', []):
+                        if isinstance(topic, dict) and 'id' in topic:
+                            topic_data['topicNames'][topic['id']] = topic.get('label', topic['id'])
+                            topic_data['topicById'][topic['id']] = topic
+            except Exception:
+                topic_data = {'topics': [], 'topicNames': {}, 'topicById': {}, 'misconceptionLabels': {}}
+        
+        # Build prompt
+        prompt = build_tutor_prompt(
+            student_profile=student_profile,
+            student_message=student_message or "Let's continue",
+            mode=mode,
+            chat_history=chat_history,
+            topic_data=topic_data,
+            learning_state=learning_state
+        )
 
         # Call Gemini
-        response = model.generate_content(
-            prompt,
-            generation_config={
-                'temperature': 0.7,
-                'max_output_tokens': 1500,
-            }
-        )
+        try:
+            response_text = gemini_client.generate_text(prompt)
+        except Exception as e:
+            # API call failed
+            return jsonify({
+                'error': str(e),
+                **create_safe_fallback_response(learning_state, student_message)
+            }), 500
         
-        return jsonify({'response': response.text})
+        # Parse JSON robustly
+        response = parse_json_robust(response_text)
+        
+        if not response:
+            # Parsing failed - return safe fallback
+            return jsonify(create_safe_fallback_response(learning_state, student_message))
+        
+        # Validate and normalize response structure
+        if 'stateUpdate' not in response:
+            response['stateUpdate'] = learning_state
+        else:
+            # Update learning state from response, but preserve stage and lastQuestionId
+            current_stage = learning_state.get('stage', 'diagnostic')
+            current_question_id = learning_state.get('lastQuestionId')
+            learning_state.update(response['stateUpdate'])
+            # Preserve stage and lastQuestionId if not in response
+            if 'stage' not in response.get('stateUpdate', {}):
+                learning_state['stage'] = current_stage
+            if 'lastQuestionId' not in response.get('stateUpdate', {}):
+                learning_state['lastQuestionId'] = current_question_id
+            session['learning_state'] = learning_state
+        
+        # Ensure all required fields are present
+        result = {
+            'assistantMessage': response.get('assistantMessage', "Let's continue learning!"),
+            'stateUpdate': learning_state,
+            'practice': response.get('practice', []),
+            'quiz': response.get('quiz', []),
+            'plan7Days': response.get('plan7Days', [])
+        }
+        
+        # Add assistant message to chat history
+        if result['assistantMessage']:
+            chat_history.append({'role': 'assistant', 'content': result['assistantMessage']})
+            session['chat_history'] = chat_history[-20:]  # Keep last 20 messages
+        
+        return jsonify(result)
         
     except Exception as e:
-        return jsonify({'error': str(e)}), 500
+        # Unexpected error - return safe fallback
+        return jsonify({
+            'error': str(e),
+            **create_safe_fallback_response(session.get('learning_state', {}), student_message)
+        }), 500
+
+
+# Health check endpoint
+@app.route('/health', methods=['GET'])
+def health():
+    """Health check endpoint."""
+    return jsonify({
+        'status': 'ok',
+        'gemini_client_ready': gemini_client is not None,
+        'tutor_engine_ready': tutor_engine is not None
+    })
+
 
 if __name__ == '__main__':
-    app.run(debug=True)
+    port = int(os.getenv('PORT', 5000))
+    app.run(debug=True, host='0.0.0.0', port=port)
